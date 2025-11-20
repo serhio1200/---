@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умный Холодильник</title>
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="description" content="Управляйте продуктами и рецептами легко!">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --primary-light: #C8E6C9;
+            --secondary: #2196F3;
+            --secondary-dark: #1976D2;
+            --danger: #f44336;
+            --danger-dark: #d32f2f;
+            --warning: #FF9800;
+            --warning-dark: #F57C00;
+            --dark: #333;
+            --light: #f5f5f5;
+            --gray: #757575;
+            --white: #ffffff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            padding: 25px 0;
+            text-align: center;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            transform: rotate(30deg);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+        }
+
+        .install-prompt {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: var(--dark);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        nav button {
+            background-color: transparent;
+            border: none;
+            color: var(--white);
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            flex: 1;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        nav button::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background-color: var(--primary);
+            transition: var(--transition);
+            transform: translateX(-50%);
+        }
+
+        nav button:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        nav button.active {
+            background-color: var(--primary);
+        }
+
+        nav button.active::after {
+            width: 80%;
+        }
+
+        .section {
+            display: none;
+            padding: 25px;
+            background-color: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-top: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: var(--dark);
+        }
+
+        .section-description {
+            color: var(--gray);
+            margin-bottom: 20px;
+        }
+
+        .alert-banner {
+            background-color: var(--warning);
+            color: var(--white);
+            padding: 15px 20px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .alert-banner.expiring {
+            background-color: var(--warning);
+        }
+
+        .alert-banner.expired {
+            background-color: var(--danger);
+        }
+
+        .product-list {
+            margin-top: 20px;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: var(--transition);
+            border-left: 4px solid var(--primary);
+        }
+
+        .product-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .product-item.expiring {
+            border-left-color: var(--warning);
+            background-color: rgba(255, 152, 0, 0.05);
+        }
+
+        .product-item.expired {
+            border-left-color: var(--danger);
+            background-color: rgba(244, 67, 54, 0.05);
+            text-decoration: line-through;
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .product-details {
+            display: flex;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .product-details span {
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .product-details span::before {
+            content: '•';
+            margin-right: 5px;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: var(--white);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--danger-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--white);
+        }
+
+        .btn-warning:hover {
+            background-color: var(--warning-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: var(--gray);
+            color: var(--white);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(117, 117, 117, 0.3);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: var(--white);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--dark);
+        }
+
+        .close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray);
+            transition: var(--transition);
+        }
+
+        .close:hover {
+            color: var(--dark);
+            transform: rotate(90deg);
+        }
+
+        .buy-list {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .buy-list h3 {
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+
+        .buy-items {
+            list-style-type: none;
+        }
+
+        .buy-items li {
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            background-color: var(--white);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .buy-items li:hover {
+            transform: translateX(5px);
+        }
+
+        .buy-items li::before {
+            content: '🛒';
+            margin-right: 10px;
+        }
+
+        .recipe-item {
+            background-color: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .recipe-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .recipe-name {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .recipe-description {
+            color: var(--gray);
+            margin-bottom: 15px;
+        }
+
+        .recipe-ingredients {
+            margin-top: 15px;
+        }
+
+        .recipe-ingredients h4 {
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .recipe-ingredients ul {
+            padding-left: 20px;
+        }
+
+        .recipe-ingredients li {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .recipe-ingredients li.missing {
+            color: var(--danger);
+        }
+
+        .recipe-ingredients li::before {
+            content: '✓';
+            margin-right: 8px;
+            color: var(--primary);
+        }
+
+        .recipe-ingredients li.missing::before {
+            content: '✗';
+            color: var(--danger);
+        }
+
+        .recipe-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .settings-option {
+            margin-bottom: 25px;
+            padding: 20px;
+            background-color: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .settings-option h3 {
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: var(--transition);
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: var(--transition);
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .ingredients-selector {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .ingredient-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .ingredient-option:hover {
+            background-color: var(--primary-light);
+        }
+
+        .ingredient-option input {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background-color: var(--primary);
+            color: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            z-index: 1001;
+            transform: translateX(150%);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background-color: var(--danger);
+        }
+
+        .notification.warning {
+            background-color: var(--warning);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background-color: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .empty-state-text {
+            font-size: 1.1rem;
+        }
+
+        .install-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .install-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+            }
+            
+            .product-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .product-actions {
+                margin-top: 10px;
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .recipe-actions {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .section-header .btn-primary {
+                margin-top: 10px;
+                width: 100%;
+            }
+            
+            .install-prompt {
+                position: static;
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Умный Холодильник</h1>
+            <p class="subtitle">Управляйте продуктами и рецептами легко!</p>
+            <div class="install-prompt" id="install-prompt">
+                <button class="install-btn" id="install-btn">
+                    <span>📲</span> Установить приложение
+                </button>
+            </div>
+        </header>
+        
+        <nav>
+            <button class="nav-btn active" data-section="fridge">❄️ Холодильник</button>
+            <button class="nav-btn" data-section="products">🥦 Список продуктов</button>
+            <button class="nav-btn" data-section="recipes">📋 Меню рецептов</button>
+            <button class="nav-btn" data-section="settings">⚙️ Настройки</button>
+        </nav>
+        
+        <!-- Раздел Холодильник -->
+        <section id="fridge" class="section active">
+            <div class="section-header">
+                <h2 class="section-title">Холодильник</h2>
+                <button class="btn-primary" id="scan-product-btn">
+                    <span>📷</span> Сканировать продукт
+                </button>
+            </div>
+            <p class="section-description">Здесь отображаются ваши продукты и срок их использования</p>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-products">0</div>
+                    <div class="stat-label">Всего продуктов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="expiring-products">0</div>
+                    <div class="stat-label">Скоро истекает</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="expired-products">0</div>
+                    <div class="stat-label">Просрочено</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="fresh-products">0</div>
+                    <div class="stat-label">Свежих продуктов</div>
+                </div>
+            </div>
+            
+            <div id="alert-container">
+                <!-- Предупреждения будут добавлены с помощью JavaScript -->
+            </div>
+            
+            <div class="product-list" id="fridge-list">
+                <!-- Продукты будут добавлены с помощью JavaScript -->
+            </div>
+            
+            <div class="buy-list" id="buy-list">
+                <h3>🛒 Список покупок:</h3>
+                <ul class="buy-items" id="buy-items">
+                    <!-- Продукты для покупки будут добавлены с помощью JavaScript -->
+                </ul>
+            </div>
+        </section>
+        
+        <!-- Раздел Список продуктов -->
+        <section id="products" class="section">
+            <div class="section-header">
+                <h2 class="section-title">Список продуктов</h2>
+                <button class="btn-primary" id="add-product-btn">
+                    <span>➕</span> Добавить продукт
+                </button>
+            </div>
+            <p class="section-description">Управляйте списком продуктов и устанавливайте время их использования</p>
+            
+            <div class="product-list" id="products-list">
+                <!-- Продукты будут добавлены с помощью JavaScript -->
+            </div>
+        </section>
+        
+        <!-- Раздел Меню рецептов -->
+        <section id="recipes" class="section">
+            <div class="section-header">
+                <h2 class="section-title">Меню рецептов</h2>
+                <button class="btn-primary" id="add-recipe-btn">
+                    <span>➕</span> Добавить рецепт
+                </button>
+            </div>
+            <p class="section-description">Создавайте рецепты из доступных продуктов</p>
+            
+            <div id="recipes-list">
+                <!-- Рецепты будут добавлены с помощью JavaScript -->
+            </div>
+        </section>
+        
+        <!-- Раздел Настройки -->
+        <section id="settings" class="section">
+            <h2 class="section-title">Настройки</h2>
+            
+            <div class="settings-option">
+                <h3>🔊 Звук</h3>
+                <label class="switch">
+                    <input type="checkbox" id="sound-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span id="sound-status">Включено</span>
+            </div>
+            
+            <div class="settings-option">
+                <h3>⏰ Напоминания</h3>
+                <label class="switch">
+                    <input type="checkbox" id="reminders-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span id="reminders-status">Включено</span>
+            </div>
+            
+            <div class="settings-option">
+                <h3>📁 Экспорт/Импорт данных</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn-primary" id="export-btn">
+                        <span>📤</span> Экспорт данных
+                    </button>
+                    <button class="btn-secondary" id="import-btn">
+                        <span>📥</span> Импорт данных
+                    </button>
+                    <input type="file" id="import-file" style="display: none;" accept=".json">
+                </div>
+            </div>
+            
+            <div class="settings-option">
+                <h3>📱 Установка приложения</h3>
+                <p>Установите это приложение на свой телефон для быстрого доступа</p>
+                <button class="install-btn" id="install-app-btn">
+                    <span>📲</span> Установить приложение
+                </button>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Модальное окно для добавления/редактирования продукта -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="product-modal-title">Добавить продукт</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="product-form">
+                <input type="hidden" id="product-id">
+                <div class="form-group">
+                    <label for="product-name">Название продукта:</label>
+                    <input type="text" id="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-quantity">Количество:</label>
+                    <input type="text" id="product-quantity" placeholder="Например: 1 л" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-category">Категория:</label>
+                    <select id="product-category">
+                        <option value="Молочные">Молочные продукты</option>
+                        <option value="Овощи">Овощи</option>
+                        <option value="Фрукты">Фрукты</option>
+                        <option value="Мясо">Мясо и птица</option>
+                        <option value="Рыба">Рыба и морепродукты</option>
+                        <option value="Бакалея">Бакалея</option>
+                        <option value="Напитки">Напитки</option>
+                        <option value="Другое">Другое</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="product-days">Время использования (в днях):</label>
+                    <input type="number" id="product-days" min="1" required>
+                </div>
+                <button type="submit" class="btn-primary">Сохранить</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для добавления/редактирования рецепта -->
+    <div id="recipe-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="recipe-modal-title">Добавить рецепт</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="recipe-form">
+                <input type="hidden" id="recipe-id">
+                <div class="form-group">
+                    <label for="recipe-name">Название рецепта:</label>
+                    <input type="text" id="recipe-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Выберите ингредиенты из списка продуктов:</label>
+                    <div class="ingredients-selector" id="ingredients-selector">
+                        <!-- Ингредиенты будут добавлены с помощью JavaScript -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="recipe-description">Описание рецепта (необязательно):</label>
+                    <textarea id="recipe-description" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Сохранить рецепт</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Уведомление -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Основные переменные приложения
+        let products = JSON.parse(localStorage.getItem('fridgeProducts')) || [];
+        let recipes = JSON.parse(localStorage.getItem('fridgeRecipes')) || [];
+        let settings = JSON.parse(localStorage.getItem('fridgeSettings')) || {
+            soundEnabled: true,
+            remindersEnabled: true
+        };
+
+        // DOM элементы
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const sections = document.querySelectorAll('.section');
+        const fridgeList = document.getElementById('fridge-list');
+        const productsList = document.getElementById('products-list');
+        const recipesList = document.getElementById('recipes-list');
+        const buyItems = document.getElementById('buy-items');
+        const alertContainer = document.getElementById('alert-container');
+        const ingredientsSelector = document.getElementById('ingredients-selector');
+        
+        // Статистика
+        const totalProductsEl = document.getElementById('total-products');
+        const expiringProductsEl = document.getElementById('expiring-products');
+        const expiredProductsEl = document.getElementById('expired-products');
+        const freshProductsEl = document.getElementById('fresh-products');
+        
+        // Модальные окна
+        const productModal = document.getElementById('product-modal');
+        const recipeModal = document.getElementById('recipe-modal');
+        const productForm = document.getElementById('product-form');
+        const recipeForm = document.getElementById('recipe-form');
+        
+        // Кнопки
+        const addProductBtn = document.getElementById('add-product-btn');
+        const addRecipeBtn = document.getElementById('add-recipe-btn');
+        const scanProductBtn = document.getElementById('scan-product-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const importBtn = document.getElementById('import-btn');
+        const importFile = document.getElementById('import-file');
+        const installAppBtn = document.getElementById('install-app-btn');
+        const installPrompt = document.getElementById('install-prompt');
+        
+        // Настройки
+        const soundToggle = document.getElementById('sound-toggle');
+        const remindersToggle = document.getElementById('reminders-toggle');
+        const soundStatus = document.getElementById('sound-status');
+        const remindersStatus = document.getElementById('reminders-status');
+        
+        // Уведомления
+        const notification = document.getElementById('notification');
+        
+        // Переменные для PWA
+        let deferredPrompt;
+
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            // Загрузка данных
+            loadProducts();
+            loadRecipes();
+            updateSettingsUI();
+            
+            // Настройка навигации
+            setupNavigation();
+            
+            // Настройка модальных окон
+            setupModals();
+            
+            // Настройка обработчиков событий
+            setupEventListeners();
+            
+            // Проверка просроченных продуктов
+            checkExpiringProducts();
+            
+            // Обновление статистики
+            updateStats();
+            
+            // Настройка PWA
+            setupPWA();
+        });
+
+        // Функции для работы с PWA
+        function setupPWA() {
+            // Обработка события beforeinstallprompt
+            window.addEventListener('beforeinstallprompt', (e) => {
+                // Предотвращаем автоматическое отображение подсказки
+                e.preventDefault();
+                // Сохраняем событие для последующего использования
+                deferredPrompt = e;
+                // Показываем кнопку установки
+                installPrompt.style.display = 'block';
+            });
+
+            // Обработка нажатия на кнопку установки
+            installAppBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    // Показываем подсказку установки
+                    deferredPrompt.prompt();
+                    // Ждем, пока пользователь ответит на подсказку
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        showNotification('Приложение успешно установлено!');
+                        installPrompt.style.display = 'none';
+                    }
+                    // Очищаем сохраненный prompt, так как он может быть использован только один раз
+                    deferredPrompt = null;
+                }
+            });
+
+            // Отслеживание установки приложения
+            window.addEventListener('appinstalled', () => {
+                // Очищаем сохраненный prompt
+                deferredPrompt = null;
+                // Скрываем кнопку установки
+                installPrompt.style.display = 'none';
+            });
+        }
+
+        // Функции для работы с навигацией
+        function setupNavigation() {
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetSection = this.getAttribute('data-section');
+                    
+                    // Обновляем активную кнопку
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Показываем активный раздел
+                    sections.forEach(section => {
+                        section.classList.remove('active');
+                        if (section.id === targetSection) {
+                            section.classList.add('active');
+                            
+                            // При переходе на холодильник проверяем продукты
+                            if (section.id === 'fridge') {
+                                checkExpiringProducts();
+                                updateStats();
+                            }
+                        }
+                    });
+                });
+            });
+        }
+
+        // Функции для работы с модальными окнами
+        function setupModals() {
+            // Закрытие модальных окон
+            const closeButtons = document.querySelectorAll('.close');
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    productModal.style.display = 'none';
+                    recipeModal.style.display = 'none';
+                });
+            });
+            
+            // Закрытие при клике вне модального окна
+            window.addEventListener('click', function(event) {
+                if (event.target === productModal) {
+                    productModal.style.display = 'none';
+                }
+                if (event.target === recipeModal) {
+                    recipeModal.style.display = 'none';
+                }
+            });
+            
+            // Обработка формы продукта
+            productForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveProduct();
+            });
+            
+            // Обработка формы рецепта
+            recipeForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveRecipe();
+            });
+        }
+
+        // Функции для работы с продуктами
+        function loadProducts() {
+            renderProductsList();
+            renderFridgeList();
+            updateIngredientsSelector();
+            updateStats();
+        }
+
+        function renderProductsList() {
+            productsList.innerHTML = '';
+            
+            if (products.length === 0) {
+                productsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🥦</div>
+                        <div class="empty-state-text">Нет добавленных продуктов</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            products.forEach((product, index) => {
+                const productItem = document.createElement('div');
+                productItem.className = 'product-item';
+                productItem.innerHTML = `
+                    <div class="product-info">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-details">
+                            <span>${product.quantity}</span>
+                            <span>Категория: ${product.category || 'Не указана'}</span>
+                            <span>Использовать за ${product.days} дней</span>
+                        </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn-warning edit-product" data-index="${index}">
+                            <span>✏️</span> Редактировать
+                        </button>
+                        <button class="btn-danger delete-product" data-index="${index}">
+                            <span>🗑️</span> Удалить
+                        </button>
+                    </div>
+                `;
+                productsList.appendChild(productItem);
+            });
+            
+            // Добавляем обработчики для кнопок редактирования и удаления
+            document.querySelectorAll('.edit-product').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    editProduct(index);
+                });
+            });
+            
+            document.querySelectorAll('.delete-product').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    deleteProduct(index);
+                });
+            });
+        }
+
+        function renderFridgeList() {
+            fridgeList.innerHTML = '';
+            buyItems.innerHTML = '';
+            alertContainer.innerHTML = '';
+            
+            if (products.length === 0) {
+                fridgeList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❄️</div>
+                        <div class="empty-state-text">Нет продуктов в холодильнике</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const today = new Date();
+            const buyList = [];
+            const expiringProducts = [];
+            const expiredProducts = [];
+            
+            products.forEach((product, index) => {
+                const productItem = document.createElement('div');
+                
+                // Рассчитываем дату истечения срока
+                const addedDate = product.addedDate ? new Date(product.addedDate) : today;
+                const expiryDate = new Date(addedDate);
+                expiryDate.setDate(expiryDate.getDate() + product.days);
+                
+                // Определяем, истек ли срок
+                const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                
+                // Определяем класс в зависимости от оставшегося времени
+                let itemClass = 'product-item';
+                if (daysLeft <= 0) {
+                    itemClass += ' expired';
+                    buyList.push(product.name);
+                    expiredProducts.push(product);
+                } else if (daysLeft <= 2) {
+                    itemClass += ' expiring';
+                    buyList.push(product.name);
+                    expiringProducts.push(product);
+                }
+                
+                productItem.className = itemClass;
+                productItem.innerHTML = `
+                    <div class="product-info">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-details">
+                            <span>${product.quantity}</span>
+                            <span>Категория: ${product.category || 'Не указана'}</span>
+                            <span>${daysLeft > 0 ? `Осталось ${daysLeft} дней` : 'Срок истек!'}</span>
+                        </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn-danger delete-fridge-product" data-index="${index}">
+                            <span>🗑️</span> Удалить
+                        </button>
+                    </div>
+                `;
+                fridgeList.appendChild(productItem);
+            });
+            
+            // Добавляем предупреждения
+            if (expiredProducts.length > 0) {
+                const alertBanner = document.createElement('div');
+                alertBanner.className = 'alert-banner expired';
+                alertBanner.innerHTML = `
+                    <span>⚠️ Внимание! У вас ${expiredProducts.length} просроченных продукта!</span>
+                    <button class="btn-danger" id="dismiss-alert">Закрыть</button>
+                `;
+                alertContainer.appendChild(alertBanner);
+            } else if (expiringProducts.length > 0) {
+                const alertBanner = document.createElement('div');
+                alertBanner.className = 'alert-banner expiring';
+                alertBanner.innerHTML = `
+                    <span>⚠️ У вас ${expiringProducts.length} продукт(ов) скоро истечёт!</span>
+                    <button class="btn-warning" id="dismiss-alert">Закрыть</button>
+                `;
+                alertContainer.appendChild(alertBanner);
+            }
+            
+            // Добавляем обработчик для кнопки закрытия предупреждения
+            document.getElementById('dismiss-alert')?.addEventListener('click', function() {
+                alertContainer.innerHTML = '';
+            });
+            
+            // Добавляем продукты для покупки
+            if (buyList.length > 0) {
+                buyList.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    buyItems.appendChild(li);
+                });
+            } else {
+                buyItems.innerHTML = '<li>Все продукты в наличии!</li>';
+            }
+            
+            // Добавляем обработчики для кнопок удаления в холодильнике
+            document.querySelectorAll('.delete-fridge-product').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    deleteProduct(index);
+                });
+            });
+        }
+
+        function updateStats() {
+            const today = new Date();
+            let expiringCount = 0;
+            let expiredCount = 0;
+            let freshCount = 0;
+            
+            products.forEach(product => {
+                const addedDate = product.addedDate ? new Date(product.addedDate) : today;
+                const expiryDate = new Date(addedDate);
+                expiryDate.setDate(expiryDate.getDate() + product.days);
+                
+                const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysLeft <= 0) {
+                    expiredCount++;
+                } else if (daysLeft <= 2) {
+                    expiringCount++;
+                } else {
+                    freshCount++;
+                }
+            });
+            
+            totalProductsEl.textContent = products.length;
+            expiringProductsEl.textContent = expiringCount;
+            expiredProductsEl.textContent = expiredCount;
+            freshProductsEl.textContent = freshCount;
+        }
+
+        function checkExpiringProducts() {
+            const today = new Date();
+            const expiringProducts = [];
+            const expiredProducts = [];
+            
+            products.forEach(product => {
+                const addedDate = product.addedDate ? new Date(product.addedDate) : today;
+                const expiryDate = new Date(addedDate);
+                expiryDate.setDate(expiryDate.getDate() + product.days);
+                
+                const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysLeft <= 0) {
+                    expiredProducts.push(product);
+                } else if (daysLeft <= 2) {
+                    expiringProducts.push(product);
+                }
+            });
+            
+            // Показываем уведомление, если есть просроченные продукты
+            if (expiredProducts.length > 0 && settings.remindersEnabled) {
+                showNotification(`Внимание! У вас ${expiredProducts.length} просроченных продукта!`, 'error');
+            } else if (expiringProducts.length > 0 && settings.remindersEnabled) {
+                showNotification(`У вас ${expiringProducts.length} продукт(ов) скоро истечёт!`, 'warning');
+            }
+        }
+
+        function openProductModal() {
+            document.getElementById('product-modal-title').textContent = 'Добавить продукт';
+            productForm.reset();
+            document.getElementById('product-id').value = '';
+            productModal.style.display = 'flex';
+        }
+
+        function editProduct(index) {
+            const product = products[index];
+            document.getElementById('product-modal-title').textContent = 'Редактировать продукт';
+            document.getElementById('product-id').value = index;
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('product-quantity').value = product.quantity;
+            document.getElementById('product-category').value = product.category || 'Другое';
+            document.getElementById('product-days').value = product.days;
+            productModal.style.display = 'flex';
+        }
+
+        function saveProduct() {
+            const id = document.getElementById('product-id').value;
+            const name = document.getElementById('product-name').value;
+            const quantity = document.getElementById('product-quantity').value;
+            const category = document.getElementById('product-category').value;
+            const days = parseInt(document.getElementById('product-days').value);
+            
+            if (id === '') {
+                // Добавляем новый продукт
+                const newProduct = {
+                    name,
+                    quantity,
+                    category,
+                    days,
+                    addedDate: new Date().toISOString()
+                };
+                products.push(newProduct);
+                
+                showNotification('Продукт успешно добавлен!');
+            } else {
+                // Редактируем существующий продукт
+                const index = parseInt(id);
+                products[index].name = name;
+                products[index].quantity = quantity;
+                products[index].category = category;
+                products[index].days = days;
+                
+                showNotification('Продукт успешно обновлен!');
+            }
+            
+            // Сохраняем в localStorage
+            localStorage.setItem('fridgeProducts', JSON.stringify(products));
+            
+            // Обновляем интерфейс
+            loadProducts();
+            
+            // Закрываем модальное окно
+            productModal.style.display = 'none';
+        }
+
+        function deleteProduct(index) {
+            if (confirm('Вы уверены, что хотите удалить этот продукт?')) {
+                const productName = products[index].name;
+                products.splice(index, 1);
+                localStorage.setItem('fridgeProducts', JSON.stringify(products));
+                
+                showNotification(`Продукт "${productName}" удален`);
+                
+                loadProducts();
+            }
+        }
+
+        // Функции для работы с рецептами
+        function loadRecipes() {
+            renderRecipesList();
+        }
+
+        function renderRecipesList() {
+            recipesList.innerHTML = '';
+            
+            if (recipes.length === 0) {
+                recipesList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-text">Нет добавленных рецептов</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            recipes.forEach((recipe, index) => {
+                const recipeItem = document.createElement('div');
+                recipeItem.className = 'recipe-item';
+                
+                // Проверяем, какие ингредиенты есть в холодильнике
+                const availableIngredients = [];
+                const missingIngredients = [];
+                
+                recipe.ingredients.forEach(ingredient => {
+                    const productExists = products.some(product => 
+                        product.name.toLowerCase().includes(ingredient.toLowerCase()) || 
+                        ingredient.toLowerCase().includes(product.name.toLowerCase())
+                    );
+                    
+                    if (productExists) {
+                        availableIngredients.push(ingredient);
+                    } else {
+                        missingIngredients.push(ingredient);
+                    }
+                });
+                
+                recipeItem.innerHTML = `
+                    <h3 class="recipe-name">${recipe.name}</h3>
+                    ${recipe.description ? `<p class="recipe-description">${recipe.description}</p>` : ''}
+                    <div class="recipe-ingredients">
+                        <h4>Ингредиенты:</h4>
+                        <ul>
+                            ${recipe.ingredients.map(ingredient => {
+                                const isAvailable = availableIngredients.includes(ingredient);
+                                return `<li class="${isAvailable ? '' : 'missing'}">${ingredient}</li>`;
+                            }).join('')}
+                        </ul>
+                    </div>
+                    <div class="recipe-actions">
+                        <button class="btn-primary cook-recipe" data-index="${index}">
+                            <span>👨‍🍳</span> Приготовить
+                        </button>
+                        <button class="btn-warning edit-recipe" data-index="${index}">
+                            <span>✏️</span> Редактировать
+                        </button>
+                        <button class="btn-danger delete-recipe" data-index="${index}">
+                            <span>🗑️</span> Удалить
+                        </button>
+                    </div>
+                `;
+                recipesList.appendChild(recipeItem);
+            });
+            
+            // Добавляем обработчики для кнопок
+            document.querySelectorAll('.edit-recipe').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    editRecipe(index);
+                });
+            });
+            
+            document.querySelectorAll('.delete-recipe').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    deleteRecipe(index);
+                });
+            });
+            
+            document.querySelectorAll('.cook-recipe').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    cookRecipe(index);
+                });
+            });
+        }
+
+        function updateIngredientsSelector() {
+            ingredientsSelector.innerHTML = '';
+            
+            if (products.length === 0) {
+                ingredientsSelector.innerHTML = '<p>Нет продуктов для выбора</p>';
+                return;
+            }
+            
+            products.forEach((product, index) => {
+                const ingredientOption = document.createElement('div');
+                ingredientOption.className = 'ingredient-option';
+                ingredientOption.innerHTML = `
+                    <input type="checkbox" id="ingredient-${index}" value="${product.name}">
+                    <label for="ingredient-${index}">${product.name} (${product.quantity})</label>
+                `;
+                ingredientsSelector.appendChild(ingredientOption);
+            });
+        }
+
+        function openRecipeModal() {
+            document.getElementById('recipe-modal-title').textContent = 'Добавить рецепт';
+            recipeForm.reset();
+            document.getElementById('recipe-id').value = '';
+            updateIngredientsSelector();
+            recipeModal.style.display = 'flex';
+        }
+
+        function editRecipe(index) {
+            const recipe = recipes[index];
+            document.getElementById('recipe-modal-title').textContent = 'Редактировать рецепт';
+            document.getElementById('recipe-id').value = index;
+            document.getElementById('recipe-name').value = recipe.name;
+            document.getElementById('recipe-description').value = recipe.description || '';
+            
+            // Обновляем селектор ингредиентов
+            updateIngredientsSelector();
+            
+            // Отмечаем выбранные ингредиенты
+            recipe.ingredients.forEach(ingredient => {
+                const checkbox = document.querySelector(`input[value="${ingredient}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+            
+            recipeModal.style.display = 'flex';
+        }
+
+        function saveRecipe() {
+            const id = document.getElementById('recipe-id').value;
+            const name = document.getElementById('recipe-name').value;
+            const description = document.getElementById('recipe-description').value;
+            
+            // Получаем выбранные ингредиенты
+            const selectedIngredients = [];
+            document.querySelectorAll('#ingredients-selector input:checked').forEach(checkbox => {
+                selectedIngredients.push(checkbox.value);
+            });
+            
+            if (selectedIngredients.length === 0) {
+                alert('Пожалуйста, выберите хотя бы один ингредиент');
+                return;
+            }
+            
+            if (id === '') {
+                // Добавляем новый рецепт
+                const newRecipe = {
+                    name,
+                    ingredients: selectedIngredients,
+                    description
+                };
+                recipes.push(newRecipe);
+                
+                showNotification('Рецепт успешно добавлен!');
+            } else {
+                // Редактируем существующий рецепт
+                const index = parseInt(id);
+                recipes[index].name = name;
+                recipes[index].ingredients = selectedIngredients;
+                recipes[index].description = description;
+                
+                showNotification('Рецепт успешно обновлен!');
+            }
+            
+            // Сохраняем в localStorage
+            localStorage.setItem('fridgeRecipes', JSON.stringify(recipes));
+            
+            // Обновляем интерфейс
+            loadRecipes();
+            
+            // Закрываем модальное окно
+            recipeModal.style.display = 'none';
+        }
+
+        function deleteRecipe(index) {
+            if (confirm('Вы уверены, что хотите удалить этот рецепт?')) {
+                const recipeName = recipes[index].name;
+                recipes.splice(index, 1);
+                localStorage.setItem('fridgeRecipes', JSON.stringify(recipes));
+                
+                showNotification(`Рецепт "${recipeName}" удален`);
+                
+                loadRecipes();
+            }
+        }
+
+        function cookRecipe(index) {
+            const recipe = recipes[index];
+            
+            // Проверяем, какие ингредиенты есть в холодильнике
+            const missingIngredients = [];
+            
+            recipe.ingredients.forEach(ingredient => {
+                const productExists = products.some(product => 
+                    product.name.toLowerCase().includes(ingredient.toLowerCase()) || 
+                    ingredient.toLowerCase().includes(product.name.toLowerCase())
+                );
+                
+                if (!productExists) {
+                    missingIngredients.push(ingredient);
+                }
+            });
+            
+            if (missingIngredients.length > 0) {
+                showNotification(`Не хватает ингредиентов: ${missingIngredients.join(', ')}`, 'warning');
+            } else {
+                showNotification(`Рецепт "${recipe.name}" готовится! Приятного аппетита!`);
+            }
+        }
+
+        // Функции для работы с настройками
+        function updateSettingsUI() {
+            soundToggle.checked = settings.soundEnabled;
+            remindersToggle.checked = settings.remindersEnabled;
+            
+            soundStatus.textContent = settings.soundEnabled ? 'Включено' : 'Выключено';
+            remindersStatus.textContent = settings.remindersEnabled ? 'Включено' : 'Выключено';
+        }
+
+        function exportData() {
+            const data = {
+                products,
+                recipes,
+                settings
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'fridge-data.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('Данные успешно экспортированы!');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (data.products) products = data.products;
+                    if (data.recipes) recipes = data.recipes;
+                    if (data.settings) settings = data.settings;
+                    
+                    localStorage.setItem('fridgeProducts', JSON.stringify(products));
+                    localStorage.setItem('fridgeRecipes', JSON.stringify(recipes));
+                    localStorage.setItem('fridgeSettings', JSON.stringify(settings));
+                    
+                    loadProducts();
+                    loadRecipes();
+                    updateSettingsUI();
+                    
+                    showNotification('Данные успешно импортированы!');
+                } catch (error) {
+                    showNotification('Ошибка при импорте данных: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+            
+            // Сбрасываем значение input, чтобы можно было импортировать тот же файл снова
+            event.target.value = '';
+        }
+
+        // Функции для работы с уведомлениями
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            notification.className = 'notification';
+            notification.classList.add(type);
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Кнопки добавления
+            addProductBtn.addEventListener('click', openProductModal);
+            addRecipeBtn.addEventListener('click', openRecipeModal);
+            
+            // Кнопка сканирования (заглушка)
+            scanProductBtn.addEventListener('click', function() {
+                showNotification('Функция сканирования продуктов будет доступна в следующем обновлении!', 'warning');
+            });
+            
+            // Кнопки экспорта/импорта
+            exportBtn.addEventListener('click', exportData);
+            importBtn.addEventListener('click', () => importFile.click());
+            importFile.addEventListener('change', importData);
+            
+            // Настройки
+            soundToggle.addEventListener('change', function() {
+                settings.soundEnabled = this.checked;
+                localStorage.setItem('fridgeSettings', JSON.stringify(settings));
+                updateSettingsUI();
+                
+                if (this.checked) {
+                    showNotification('Звук включен');
+                }
+            });
+            
+            remindersToggle.addEventListener('change', function() {
+                settings.remindersEnabled = this.checked;
+                localStorage.setItem('fridgeSettings', JSON.stringify(settings));
+                updateSettingsUI();
+                
+                if (this.checked) {
+                    showNotification('Напоминания включены');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
