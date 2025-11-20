@@ -987,6 +987,7 @@
         const importBtn = document.getElementById('import-btn');
         const importFile = document.getElementById('import-file');
         const installAppBtn = document.getElementById('install-app-btn');
+        const installBtn = document.getElementById('install-btn');
         const installPrompt = document.getElementById('install-prompt');
         
         // Настройки
@@ -1037,22 +1038,10 @@
                 deferredPrompt = e;
                 // Показываем кнопку установки
                 installPrompt.style.display = 'block';
-            });
-
-            // Обработка нажатия на кнопку установки
-            installAppBtn.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    // Показываем подсказку установки
-                    deferredPrompt.prompt();
-                    // Ждем, пока пользователь ответит на подсказку
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                        showNotification('Приложение успешно установлено!');
-                        installPrompt.style.display = 'none';
-                    }
-                    // Очищаем сохраненный prompt, так как он может быть использован только один раз
-                    deferredPrompt = null;
-                }
+                
+                // Добавляем обработчики для обеих кнопок установки
+                installBtn.addEventListener('click', installApp);
+                installAppBtn.addEventListener('click', installApp);
             });
 
             // Отслеживание установки приложения
@@ -1061,7 +1050,33 @@
                 deferredPrompt = null;
                 // Скрываем кнопку установки
                 installPrompt.style.display = 'none';
+                installAppBtn.style.display = 'none';
+                showNotification('Приложение успешно установлено!');
             });
+            
+            // Проверяем, установлено ли приложение уже
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                installPrompt.style.display = 'none';
+                installAppBtn.style.display = 'none';
+            }
+        }
+        
+        // Функция установки приложения
+        function installApp() {
+            if (deferredPrompt) {
+                // Показываем подсказку установки
+                deferredPrompt.prompt();
+                
+                // Ждем, пока пользователь ответит на подсказку
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Пользователь принял установку');
+                    } else {
+                        console.log('Пользователь отклонил установку');
+                    }
+                    deferredPrompt = null;
+                });
+            }
         }
 
         // Функции для работы с навигацией
