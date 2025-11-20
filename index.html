@@ -948,6 +948,11 @@
     <!-- Уведомление -->
     <div id="notification" class="notification"></div>
 
+    <!-- Скрытый элемент для воспроизведения звуков -->
+    <audio id="sound-notification" preload="auto">
+        <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    </audio>
+
     <script>
         // Основные переменные приложения
         let products = JSON.parse(localStorage.getItem('fridgeProducts')) || [];
@@ -996,8 +1001,9 @@
         const soundStatus = document.getElementById('sound-status');
         const remindersStatus = document.getElementById('reminders-status');
         
-        // Уведомления
+        // Уведомления и звук
         const notification = document.getElementById('notification');
+        const soundNotification = document.getElementById('sound-notification');
         
         // Переменные для PWA
         let deferredPrompt;
@@ -1055,7 +1061,8 @@
             });
             
             // Проверяем, установлено ли приложение уже
-            if (window.matchMedia('(display-mode: standalone)').matches) {
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
                 installPrompt.style.display = 'none';
                 installAppBtn.style.display = 'none';
             }
@@ -1076,6 +1083,8 @@
                     }
                     deferredPrompt = null;
                 });
+            } else {
+                showNotification('Установка недоступна в этом браузере', 'warning');
             }
         }
 
@@ -1357,8 +1366,10 @@
             // Показываем уведомление, если есть просроченные продукты
             if (expiredProducts.length > 0 && settings.remindersEnabled) {
                 showNotification(`Внимание! У вас ${expiredProducts.length} просроченных продукта!`, 'error');
+                playSound();
             } else if (expiringProducts.length > 0 && settings.remindersEnabled) {
                 showNotification(`У вас ${expiringProducts.length} продукт(ов) скоро истечёт!`, 'warning');
+                playSound();
             }
         }
 
@@ -1399,6 +1410,7 @@
                 products.push(newProduct);
                 
                 showNotification('Продукт успешно добавлен!');
+                playSound();
             } else {
                 // Редактируем существующий продукт
                 const index = parseInt(id);
@@ -1408,6 +1420,7 @@
                 products[index].days = days;
                 
                 showNotification('Продукт успешно обновлен!');
+                playSound();
             }
             
             // Сохраняем в localStorage
@@ -1427,6 +1440,7 @@
                 localStorage.setItem('fridgeProducts', JSON.stringify(products));
                 
                 showNotification(`Продукт "${productName}" удален`);
+                playSound();
                 
                 loadProducts();
             }
@@ -1595,6 +1609,7 @@
                 recipes.push(newRecipe);
                 
                 showNotification('Рецепт успешно добавлен!');
+                playSound();
             } else {
                 // Редактируем существующий рецепт
                 const index = parseInt(id);
@@ -1603,6 +1618,7 @@
                 recipes[index].description = description;
                 
                 showNotification('Рецепт успешно обновлен!');
+                playSound();
             }
             
             // Сохраняем в localStorage
@@ -1622,6 +1638,7 @@
                 localStorage.setItem('fridgeRecipes', JSON.stringify(recipes));
                 
                 showNotification(`Рецепт "${recipeName}" удален`);
+                playSound();
                 
                 loadRecipes();
             }
@@ -1646,8 +1663,10 @@
             
             if (missingIngredients.length > 0) {
                 showNotification(`Не хватает ингредиентов: ${missingIngredients.join(', ')}`, 'warning');
+                playSound();
             } else {
                 showNotification(`Рецепт "${recipe.name}" готовится! Приятного аппетита!`);
+                playSound();
             }
         }
 
@@ -1679,6 +1698,7 @@
             document.body.removeChild(link);
             
             showNotification('Данные успешно экспортированы!');
+            playSound();
         }
 
         function importData(event) {
@@ -1703,8 +1723,10 @@
                     updateSettingsUI();
                     
                     showNotification('Данные успешно импортированы!');
+                    playSound();
                 } catch (error) {
                     showNotification('Ошибка при импорте данных: ' + error.message, 'error');
+                    playSound();
                 }
             };
             reader.readAsText(file);
@@ -1713,7 +1735,7 @@
             event.target.value = '';
         }
 
-        // Функции для работы с уведомлениями
+        // Функции для работы с уведомлениями и звуком
         function showNotification(message, type = 'success') {
             notification.textContent = message;
             notification.className = 'notification';
@@ -1725,6 +1747,38 @@
             }, 3000);
         }
 
+        function playSound() {
+            if (settings.soundEnabled) {
+                try {
+                    // Создаем простой звук с помощью Web Audio API
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = 800;
+                    gainNode.gain.value = 0.1;
+                    
+                    oscillator.start();
+                    setTimeout(() => {
+                        oscillator.stop();
+                    }, 100);
+                } catch (error) {
+                    console.log('Web Audio API не поддерживается: ', error);
+                    // Альтернатива: попытка использовать HTML5 Audio
+                    try {
+                        soundNotification.currentTime = 0;
+                        soundNotification.play().catch(e => console.log('Не удалось воспроизвести звук: ', e));
+                    } catch (e) {
+                        console.log('HTML5 Audio также не поддерживается');
+                    }
+                }
+            }
+        }
+
         // Настройка обработчиков событий
         function setupEventListeners() {
             // Кнопки добавления
@@ -1734,6 +1788,7 @@
             // Кнопка сканирования (заглушка)
             scanProductBtn.addEventListener('click', function() {
                 showNotification('Функция сканирования продуктов будет доступна в следующем обновлении!', 'warning');
+                playSound();
             });
             
             // Кнопки экспорта/импорта
@@ -1749,6 +1804,7 @@
                 
                 if (this.checked) {
                     showNotification('Звук включен');
+                    playSound();
                 }
             });
             
@@ -1759,6 +1815,7 @@
                 
                 if (this.checked) {
                     showNotification('Напоминания включены');
+                    playSound();
                 }
             });
         }
